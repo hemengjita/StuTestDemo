@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>在线学习工具</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e9ebee;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .login-container {
+            width: 350px;
+            padding: 40px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-container h2 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #333;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 15px;
+            background-color: #5c7cfa;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .login-container button:hover {
+            background-color: #4b6cf5;
+        }
+
+        .conversation-container {
+            display: none;
+            max-width: 600px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+        }
+
+        .question-stem {
+            background-color: #f7f7f7;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .bubble {
+            display: none;
+            background-color: #f0f0f0;
+            border-radius: 18px;
+            padding: 20px;
+            position: relative;
+            margin-bottom: 8px;
+            max-width: 80%;
+        }
+
+        .bubble:before {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+        }
+
+        .student-bubble {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+        }
+
+        .student-bubble:before {
+            right: -8px;
+            top: 20px;
+            border: 12px solid transparent;
+            border-left-color: #dcf8c6;
+        }
+
+        .teacher-bubble {
+            background-color: #a5d4ff;
+            align-self: flex-start;
+        }
+
+        .teacher-bubble:before {
+            left: -8px;
+            top: 20px;
+            border: 12px solid transparent;
+            border-right-color: #a5d4ff;
+        }
+
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .input-field {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .submit-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .next-button {
+            display: none;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+    </style>
+</head>
+<body>
+     <div class="login-container" id="loginContainer">
+            <h2>登录</h2>
+            <input type="text" id="ID" placeholder="ID">
+            <input type="text" id="name" placeholder="姓名">
+            <button onclick="login()">登录</button>
+        </div>
+    
+        <div class="conversation-container" id="conversationContainer">
+            <div class="question-stem" id="questionStem">
+                <!-- 题干内容将通过JavaScript动态更新 -->
+            </div>
+
+<!--        <div class="bubble teacher-bubble" id="message1">11111平台: 设这个人答错的题目数量为x，那么答对的题目数量可以表示为____________。</div>-->
+<!--        <div class="bubble student-bubble" id="studentResponse1">-->
+<!--            学生:-->
+<!--            <div class="input-container">-->
+<!--                <input type="text" class="input-field" id="answer1">-->
+<!--                <button class="submit-button" onclick="submitAnswer(1)">提交</button>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="bubble teacher-bubble" id="message2">平台: 基于上一步的数学符号表示，应该如何列方程？________________。</div>-->
+<!--        <div class="bubble student-bubble" id="studentResponse2">-->
+<!--            学生:-->
+<!--            <div class="input-container">-->
+<!--                <input type="text" class="input-field" id="answer2">-->
+<!--                <button class="submit-button" onclick="submitAnswer(2)">提交</button>-->
+<!--            </div>-->
+<!--        </div>-->
+        <div class="bubble teacher-bubble" id="final-message">平台: 恭喜，你已完成本次练习。</div>
+        <button class="next-button" id="nextQuestionButton" onclick="goToNextQuestion()">下一题</button>
+    </div>
+
+    <script>
+        // 这个数组将会暂存用户的所有答案
+        let answers = {};
+        // 假设我们知道总题数，用来解决最后一题不保存的情况！
+        let currentSet = 0;
+        let currentQuestion = 1;
+        const sets = [
+            {
+                stem: "某企业对应聘人员进行英语考试，试题由50道选择题组成，评分标准规定：每道题的答案选对得3分，不选得0分，选错倒扣1分。已知某人有5道题未作，得了103分，则这个人选错了多少道题。",
+                questions: [
+                    "1平台: 设这个人答错的题目数量为x，那么答对的题目数量可以表示为____________。",
+                    "2平台: 基于上一步的数学符号表示，应该如何列方程？________________。",
+                ]
+            },
+            {
+                stem: "互联网“微商”经营已成为大众创业新途径，某微信平台上一件商品标价为200元，按标价的五折销售，仍可获利20元，则这件商品的进价为多少？",
+                questions: [
+                    "问题1:请回顾题目，售价与标价之间有何种数学关系？",
+                    "问题2: 怎样列出这个一元一次方程？",
+                    "问题3: 怎样列出这个一元一次方程？"
+                ]
+            },
+            {
+                stem: "互联网“微商”经营已成为大众创业新途径，某微信平台上一件商品标价为200元，按标价的五折销售，仍可获利20元，则这件商品的进价为多少？",
+                questions: [
+                    "问题1:请回顾题目，售价与标价之间有何种数学关系？",
+                    "问题2: 怎样列出这个一元一次方程？"
+                ]
+            }
+        ];
+
+        // function login() {
+        //     // 模拟登录验证...
+        //     // 验证成功后显示对话界面
+        //     document.getElementById('loginContainer').style.display = 'none';
+        //     document.getElementById('conversationContainer').style.display = 'block';
+        //     loadSet();
+        // }
+        function login() {
+            const userID = document.getElementById('ID').value;
+            const username = document.getElementById('name').value;
+            
+            // 替换为实际的后端API URL
+            const apiURL = 'http://127.0.0.1:5000/login';
+
+            fetch(apiURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ ID: userID, name: username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.message === '登录成功') {
+                    // 验证成功后显示对话界面
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('conversationContainer').style.display = 'block';
+                    loadSet();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+    
+        function loadSet() {
+            // Load the question stem for the current set
+            document.getElementById('questionStem').innerText = sets[currentSet].stem;
+            // Reset the current question to 1
+            currentQuestion = 1;
+            // Hide all bubbles
+            document.querySelectorAll('.bubble').forEach(bubble => bubble.style.display = 'none');
+            // Hide the final message and next question button
+            document.getElementById("final-message").style.display = "none";
+            document.getElementById("nextQuestionButton").style.display = "none";
+            // Reset and show the answer fields for the new set
+            resetAndShowAnswerFields();
+            // Show the first question for the new set
+            showNextQuestion();
+        }
+
+        function resetAndShowAnswerFields() {
+            // Find all answer input fields and reset them for the new set
+            document.querySelectorAll('.input-container .input-field').forEach(input => {
+                input.value = ''; // Clear the input field
+                input.disabled = false; // Enable the input field
+            });
+            // Make sure submit buttons are visible
+            document.querySelectorAll('.input-container .submit-button').forEach(button => {
+                button.style.display = 'inline-block'; // Show the submit button
+            });
+        }
+
+        function showNextQuestion() {
+            // Check if the question number is within the current set
+            if (currentQuestion <= sets[currentSet].questions.length) {
+                let messageId = `message${currentQuestion}`;
+                let studentResponseId = `studentResponse${currentQuestion}`;
+                document.getElementById(messageId).innerText = sets[currentSet].questions[currentQuestion - 1];
+                document.getElementById(messageId).style.display = "block";
+                document.getElementById(studentResponseId).style.display = "block";
+            } else {
+                document.getElementById("final-message").style.display = "block";
+                // Only show the next question button if there are more sets
+                if (currentSet < sets.length - 1) {
+                    document.getElementById("nextQuestionButton").style.display = "block";
+                }
+            }
+        }
+
+
+        //问题处理逻辑
+        function submitAnswer(questionNumber) {
+            const answerField = document.getElementById(`answer${questionNumber}`);
+            if (answerField.value.trim() !== "") {
+                // 获取用户ID和姓名
+                const userID = document.getElementById('ID').value;
+                const username = document.getElementById('name').value;
+                // 替换为实际的后端API URL
+                const apiURL = 'http://127.0.0.1:5000/submit-answer';
+
+                fetch(apiURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ID: userID, name: username, answer: answerField.value.trim() })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.message === '作答已记录') {
+                        answerField.disabled = true;
+                        answerField.nextElementSibling.style.display = "none";
+                        // Display the next question or final message
+                        currentQuestion++;
+                        showNextQuestion();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+
+            answers[`answer${currentSet}_${questionNumber}`] = answerField.value.trim();
+
+            } else {
+                alert("请输入答案。");
+            }
+
+           // 如果是当前题集的最后一题，直接保存！
+            if (questionNumber === sets[currentSet].questions.length) {
+                // 直接保存答案
+                saveAnswers();
+            }
+        }
+
+
+        function goToNextQuestion() {
+            // 在跳转到下一题之前，发送当前题的答案到后端
+             saveAnswers();
+            // Move to the next set of questions
+            if (currentSet < sets.length - 1) {
+                currentSet++;
+                loadSet();
+            }
+        }
+
+            function saveAnswers() {
+            const userID = document.getElementById('ID').value;
+            // 替换为实际的后端API URL
+            const apiURL = `http://127.0.0.1:5000/save_answers/${userID}`;
+
+            fetch(apiURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(answers)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.message === '作答记录保存成功') {
+                    console.log('作答记录已保存');
+                    // 保存后清除当前答案记录
+                    answers = {};
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Wait for user login before displaying anything
+        // loadSet();  // Comment or delete this line
+    </script>
+</body>
+</html>
+
+
+
+
